@@ -16,4 +16,4 @@ target_include_directories(
   PRIVATE ${CURSES_INCLUDE_DIR}
   PUBLIC ${GOL_INCLUDE_DIR})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE ${CURSES_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CURSES_LIBRARIES} game)

@@ -3,6 +3,8 @@
 #include <curses.h>
 #include <ncurses.h>
 
+#include "game/board.h"
+
 namespace gol {
 namespace graphics {
 
@@ -28,19 +30,23 @@ void EnableInputDelay(int delay_ms) noexcept { timeout(delay_ms); }
 
 void DisableInputDelay() noexcept { timeout(-1); }
 
-void DrawCells(const CellVec &cells, char sprite) noexcept {
-  for (const Cell &cell : cells) {
-    mvaddch(cell.row, cell.col, sprite);
+void DrawBoard(const GameOfLifeBoard& board, char sprite) noexcept {
+  for (std::size_t i = 0; i < board.Rows(); ++i) {
+    for (std::size_t j = 0; j < board.Cols(); ++j) {
+      if (board[i][j]) {
+        mvaddch(i, j, sprite);
+      }
+    }
   }
   refresh();
 }
 
-void DrawInstructions(const ScreenDimension &screen_dim) noexcept {
+void DrawInstructions(const ScreenDimension& screen_dim) noexcept {
   mvprintw(screen_dim.height - 1, 0, "%s", "press q to quit");
   refresh();
 }
 
 bool Quit() noexcept { return ('q' == getch()); }
 
-} // namespace graphics
-} // namespace gol
+}  // namespace graphics
+}  // namespace gol

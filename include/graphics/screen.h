@@ -3,6 +3,8 @@
 
 #include <vector>
 
+#include "game/board.h"
+
 namespace gol {
 namespace graphics {
 
@@ -58,17 +60,17 @@ void DisableInputDelay() noexcept;
  * \param [in] sprite The character to be displayed on screen representing a
  *                    cell.
  */
-void DrawCells(const CellVec &cells, char sprite = '+') noexcept;
+void DrawBoard(const GameOfLifeBoard& board, char sprite = '+') noexcept;
 
 /**
  * \brief Print a help message on screen.
  * \param [in] screen_dim Screen (i.e., terminal) dimensions.
  */
-void DrawInstructions(const ScreenDimension &screen_dim) noexcept;
+void DrawInstructions(const ScreenDimension& screen_dim) noexcept;
 
 [[nodiscard]] bool Quit() noexcept;
 
-} // namespace graphics
-} // namespace gol
+}  // namespace graphics
+}  // namespace gol
 
 #endif
