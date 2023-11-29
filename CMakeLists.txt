@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(gol DESCRIPTION "a ncurses visualization of Conway's game of life")
+project(life DESCRIPTION "a ncurses visualization of Conway's game of life")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
