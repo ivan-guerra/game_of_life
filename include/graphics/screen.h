@@ -60,7 +60,7 @@ void DisableInputDelay() noexcept;
  * \param [in] sprite The character to be displayed on screen representing a
  *                    cell.
  */
-void DrawBoard(const GameOfLifeBoard& board, char sprite = '+') noexcept;
+void DrawBoard(const GameOfLifeBoard& board) noexcept;
 
 /**
  * \brief Print a help message on screen.

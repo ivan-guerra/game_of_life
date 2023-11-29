@@ -30,11 +30,11 @@ void EnableInputDelay(int delay_ms) noexcept { timeout(delay_ms); }
 
 void DisableInputDelay() noexcept { timeout(-1); }
 
-void DrawBoard(const GameOfLifeBoard& board, char sprite) noexcept {
+void DrawBoard(const GameOfLifeBoard& board) noexcept {
   for (std::size_t i = 0; i < board.Rows(); ++i) {
     for (std::size_t j = 0; j < board.Cols(); ++j) {
       if (board[i][j]) {
-        mvaddch(i, j, sprite);
+        mvaddch(i, j, ' ' | A_REVERSE);
       }
     }
   }
