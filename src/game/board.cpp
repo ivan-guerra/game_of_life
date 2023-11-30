@@ -36,8 +36,8 @@ GameOfLifeBoard::GameOfLifeBoard(std::size_t num_rows, std::size_t num_cols)
 void GameOfLifeBoard::Tick() noexcept {
   CellStateMatrix tmp = state_;
   int num_live_neighbors = 0;
-  for (std::size_t i = 0; i < state_.size(); ++i) {
-    for (std::size_t j = 0; j < state_[0].size(); ++j) {
+  for (std::size_t i = 0; i < Rows(); ++i) {
+    for (std::size_t j = 0; j < Cols(); ++j) {
       num_live_neighbors = CountLiveNeighbors(i, j);
       if (state_[i][j]) {
         if (num_live_neighbors < 2) {
