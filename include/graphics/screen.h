@@ -1,20 +1,10 @@
 #ifndef SCREEN_H_
 #define SCREEN_H_
 
-#include <vector>
-
 #include "game/board.h"
 
 namespace gol {
 namespace graphics {
-
-struct Cell;
-using CellVec = std::vector<Cell>;
-
-struct Cell {
-  int row = 0;
-  int col = 0;
-};
 
 /**
  * \brief Screen Dimensions
