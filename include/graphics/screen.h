@@ -44,20 +44,22 @@ void EnableInputDelay(int delay_ms) noexcept;
 void DisableInputDelay() noexcept;
 
 /**
- * \brief Draw the render a sprite per cell in the input list of cells.
- * \param [in] cells 2D screen coordinates of Cell objects to be rendered
- *                   as sprites.
- * \param [in] sprite The character to be displayed on screen representing a
- *                    cell.
+ * \brief Render a sprite per live cell on the \p board.
+ * \param [in] board 2D Game of Life Board containing current game state.
  */
-void DrawBoard(const GameOfLifeBoard& board) noexcept;
+void DrawBoard(const game::GameOfLifeBoard& board) noexcept;
 
 /**
  * \brief Print a help message on screen.
- * \param [in] screen_dim Screen (i.e., terminal) dimensions.
+ * \param [in] screen_dim Screen dimensions.
  */
 void DrawInstructions(const ScreenDimension& screen_dim) noexcept;
 
+/**
+ * \brief Return \c true if the user has chosen to quit.
+ * \details Quitting in this case means the user pressed the 'q' key with the
+ *          ncurses window in focus.
+ */
 [[nodiscard]] bool Quit() noexcept;
 
 }  // namespace graphics

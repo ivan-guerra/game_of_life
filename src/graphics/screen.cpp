@@ -3,6 +3,8 @@
 #include <curses.h>
 #include <ncurses.h>
 
+#include <cstddef>
+
 #include "game/board.h"
 
 namespace gol {
@@ -11,7 +13,7 @@ namespace graphics {
 ScreenDimension InitScreen() noexcept {
   initscr();
   cbreak();             /* disable line buffering */
-  keypad(stdscr, TRUE); /* enable the keypad so we can work with arrow keys */
+  keypad(stdscr, TRUE); /* enable the keypad */
   noecho();             /* disable character echoing */
   curs_set(0);          /* hide the cursor */
 
@@ -30,7 +32,7 @@ void EnableInputDelay(int delay_ms) noexcept { timeout(delay_ms); }
 
 void DisableInputDelay() noexcept { timeout(-1); }
 
-void DrawBoard(const GameOfLifeBoard& board) noexcept {
+void DrawBoard(const game::GameOfLifeBoard& board) noexcept {
   for (std::size_t i = 0; i < board.Rows(); ++i) {
     for (std::size_t j = 0; j < board.Cols(); ++j) {
       if (board[i][j]) {

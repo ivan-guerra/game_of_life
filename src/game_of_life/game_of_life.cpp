@@ -53,7 +53,7 @@ static void PrintErrorAndExit(const std::string &err_msg) noexcept {
 }
 
 static void InitializeBoard(const Position2DVec &init_state,
-                            gol::GameOfLifeBoard &board) {
+                            gol::game::GameOfLifeBoard &board) {
   for (const Position2D &pos : init_state) {
     if ((pos.x >= board.Cols()) || (pos.y >= board.Rows())) {
       throw std::runtime_error("position does not fit within board boundaries");
@@ -63,7 +63,7 @@ static void InitializeBoard(const Position2DVec &init_state,
 }
 
 static void RunDrawLoop(const gol::graphics::ScreenDimension &dim,
-                        int update_rate_ms, gol::GameOfLifeBoard &board) {
+                        int update_rate_ms, gol::game::GameOfLifeBoard &board) {
   while (!gol::graphics::Quit()) {
     gol::graphics::Clear();
     gol::graphics::DrawBoard(board);
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
     /* construct the game board, the -1 on the height is intentional to avoid
      * accidentally bumping into the quit message that is displayed at the
      * bottom of the screen */
-    gol::GameOfLifeBoard board(dim.height - 1, dim.width);
+    gol::game::GameOfLifeBoard board(dim.height - 1, dim.width);
     InitializeBoard(LoadInitState(argv[optind]), board);
 
     /* set a reasonable input delay keeping in mind that higher delays make the
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
     const int kInputDelayMs = 100;
     gol::graphics::EnableInputDelay(kInputDelayMs);
 
-    /* repeatedly draw the cells until the user commands exit */
+    /* repeatedly draw the board until the user commands exit */
     RunDrawLoop(dim, update_rate_ms, board);
 
     /* cleanup ncurses resources */

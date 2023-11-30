@@ -1,14 +1,16 @@
 #include "game/board.h"
 
-#include <stdexcept>
-#include <string>
+#include <utility>
 #include <vector>
 
 namespace gol {
+namespace game {
 
 int GameOfLifeBoard::CountLiveNeighbors(std::size_t row,
                                         std::size_t col) const noexcept {
   using Offset = std::pair<int, int>;
+
+  /* These are the eight 2D offsets: left/right, up/down, and diagonals. */
   static const std::vector<Offset> kDirections = {
       {0, 1}, {1, 0}, {0, -1}, {-1, 0}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1},
   };
@@ -18,7 +20,7 @@ int GameOfLifeBoard::CountLiveNeighbors(std::size_t row,
   int neighbor_row = 0;
   int neighbor_col = 0;
   int num_live_neighbors = 0;
-  for (const auto& direction : kDirections) {
+  for (const Offset& direction : kDirections) {
     neighbor_row = row + direction.first;
     neighbor_col = col + direction.second;
     if ((neighbor_row >= 0) && (neighbor_row < kRowLimit) &&
@@ -34,7 +36,11 @@ GameOfLifeBoard::GameOfLifeBoard(std::size_t num_rows, std::size_t num_cols)
     : state_(num_rows, CellStateVec(num_cols, false)) {}
 
 void GameOfLifeBoard::Tick() noexcept {
+  /* Given the relatively small size of the screen, we go the unsophisticated
+   * route of making a copy of the game board before performing the state
+   * transformation. */
   CellStateMatrix tmp = state_;
+
   int num_live_neighbors = 0;
   for (std::size_t i = 0; i < Rows(); ++i) {
     for (std::size_t j = 0; j < Cols(); ++j) {
@@ -56,4 +62,5 @@ void GameOfLifeBoard::Tick() noexcept {
   state_ = std::move(tmp);
 }
 
+}  // namespace game
 }  // namespace gol
