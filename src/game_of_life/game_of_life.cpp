@@ -46,7 +46,7 @@ static void PrintErrorAndExit(const std::string &err_msg) noexcept {
   Position2D pos;
   Position2DVec init_state;
   while (std::getline(fhandle, line)) {
-    std::sscanf(line.c_str(), "(%zu, %zu)", &pos.x, &pos.y);
+    std::sscanf(line.c_str(), "(%zu, %zu)", &pos.y, &pos.x);
     init_state.push_back(pos);
   }
   return init_state;
@@ -54,17 +54,11 @@ static void PrintErrorAndExit(const std::string &err_msg) noexcept {
 
 static void InitializeBoard(const Position2DVec &init_state,
                             gol::GameOfLifeBoard &board) {
-  auto CenterCoordinate = [](const Position2D &pos, std::size_t height,
-                             std::size_t width) -> Position2D {
-    return {.x = height / 2 - pos.x, .y = width / 2 - pos.y};
-  };
-
   for (const Position2D &pos : init_state) {
-    Position2D cpos = CenterCoordinate(pos, board.Rows(), board.Cols());
-    if ((cpos.x >= board.Rows()) || (cpos.y >= board.Cols())) {
+    if ((pos.x >= board.Cols()) || (pos.y >= board.Rows())) {
       throw std::runtime_error("position does not fit within board boundaries");
     }
-    board[cpos.x][cpos.y] = true;
+    board[pos.y][pos.x] = true;
   }
 }
 
