@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     };
     int opt = '\0';
     int long_index = 0;
-    int update_rate_ms = 750;
+    int update_rate_ms = 10;
     while (-1 != (opt = getopt_long(argc, argv, "ht:",
                                     static_cast<struct option *>(long_options),
                                     &long_index))) {
