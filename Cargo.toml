@@ -5,5 +5,9 @@ edition = "2021"
 description = "A visualization of Conway's Game of Life."
 license = "Unlicense"
 
+[[bin]]
+name = "life"
+path = "src/main.rs"
+
 [dependencies]
 clap = {version = "4.5.20", features = ["derive"]}
