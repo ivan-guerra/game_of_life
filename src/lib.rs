@@ -1,6 +1,6 @@
 use crossterm::{
     cursor::{Hide, MoveTo, Show},
-    event::{self, Event, KeyCode},
+    event::{self, Event},
     style::{Color, Print, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
@@ -135,7 +135,7 @@ pub fn run_draw_loop(config: &Config) -> Result<(), Box<dyn Error>> {
     let screen_dim = crossterm::terminal::size()?;
     let mut game_board = GameBoard::new(
         screen_dim.0,
-        screen_dim.1 - 1, // Leave some space for the quit message.
+        screen_dim.1,
         &load_initial_state(&config.init_state_file)?,
     );
 
@@ -145,11 +145,6 @@ pub fn run_draw_loop(config: &Config) -> Result<(), Box<dyn Error>> {
     stdout.execute(Clear(ClearType::All))?;
     stdout.execute(Hide)?;
 
-    // Add the text "Press 'q' to quit" to the bottom of the screen.
-    stdout.execute(MoveTo(0, screen_dim.1 - 1))?;
-    stdout.execute(SetForegroundColor(Color::White))?;
-    stdout.execute(Print("press 'q' to quit"))?;
-
     // Main game loop
     loop {
         // Update and draw game state
@@ -157,12 +152,10 @@ pub fn run_draw_loop(config: &Config) -> Result<(), Box<dyn Error>> {
         game_board.draw()?;
         stdout.flush()?;
 
-        // Check for quit command
+        // Check for any keypress
         if event::poll(time::Duration::from_millis(config.refresh_rate_usec))? {
-            if let Event::Key(key_event) = event::read()? {
-                if key_event.code == KeyCode::Char('q') || key_event.code == KeyCode::Esc {
-                    break;
-                }
+            if let Event::Key(_) = event::read()? {
+                break;
             }
         }
     }
