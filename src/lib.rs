@@ -103,3 +103,12 @@ fn load_initial_state(init_state_file: &path::PathBuf) -> Result<Vec<Point>, std
 
     Ok(points)
 }
+
+pub fn run(config: &Config) -> Result<(), std::io::Error> {
+    let game_board = GameBoard::new(40, 20, &load_initial_state(&config.init_state_file)?);
+    // loop {
+    //     std::thread::sleep(std::time::Duration::from_micros(config.refresh_rate_usec));
+    //     game_board.next_state();
+    // }
+    Ok(())
+}

@@ -6,3 +6,4 @@ description = "A visualization of Conway's Game of Life."
 license = "Unlicense"
 
 [dependencies]
+clap = {version = "4.5.20", features = ["derive"]}
