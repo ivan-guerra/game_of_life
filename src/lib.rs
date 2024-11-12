@@ -153,7 +153,7 @@ pub fn run_draw_loop(config: &Config) -> Result<(), Box<dyn Error>> {
         stdout.flush()?;
 
         // Check for any keypress
-        if event::poll(time::Duration::from_millis(config.refresh_rate_usec))? {
+        if event::poll(time::Duration::from_micros(config.refresh_rate_usec))? {
             if let Event::Key(_) = event::read()? {
                 break;
             }
