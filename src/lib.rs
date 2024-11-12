@@ -25,6 +25,7 @@ impl Config {
     }
 }
 
+#[derive(Debug, PartialEq)]
 struct Point {
     x: u16,
     y: u16,
@@ -173,4 +174,214 @@ pub fn run_draw_loop(config: &Config) -> Result<(), Box<dyn Error>> {
     terminal::disable_raw_mode()?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use testdir::testdir;
+
+    #[test]
+    fn new_game_board_constructs_with_valid_initial_state() {
+        let init_state = vec![Point::new(1, 1)];
+        let board = GameBoard::new(3, 3, &init_state);
+
+        assert_eq!(board.width, 3);
+        assert_eq!(board.height, 3);
+        assert_eq!(board.points.len(), 9);
+        assert!(!board.points[0]); // (0,0) empty
+        assert!(board.points[4]); // (1,1) alive
+    }
+
+    #[test]
+    fn count_live_neighbors_counts_zero_on_empty_board() {
+        let init_state = vec![];
+        let board = GameBoard::new(3, 3, &init_state);
+
+        assert_eq!(board.count_live_neighbors(1, 1), 0);
+    }
+
+    #[test]
+    fn count_live_neighbors_counts_one_on_single_cell_board() {
+        let init_state = vec![Point { x: 0, y: 0 }];
+        let board = GameBoard::new(3, 3, &init_state);
+
+        assert_eq!(board.count_live_neighbors(1, 1), 1);
+    }
+
+    #[test]
+    fn count_live_neighbors_on_full_board() {
+        let init_state = vec![
+            Point { x: 0, y: 0 },
+            Point { x: 1, y: 0 },
+            Point { x: 2, y: 0 },
+            Point { x: 0, y: 1 },
+            Point { x: 2, y: 1 },
+            Point { x: 0, y: 2 },
+            Point { x: 1, y: 2 },
+            Point { x: 2, y: 2 },
+        ];
+        let board = GameBoard::new(3, 3, &init_state);
+
+        assert_eq!(board.count_live_neighbors(1, 1), 8);
+    }
+
+    #[test]
+    fn count_live_neighbors_counts_edge_neighbors() {
+        let init_state = vec![Point { x: 0, y: 0 }, Point { x: 1, y: 0 }];
+        let board = GameBoard::new(3, 3, &init_state);
+
+        assert_eq!(board.count_live_neighbors(0, 0), 1);
+    }
+
+    #[test]
+    fn count_live_neighbors_counts_corner_neighbors() {
+        let init_state = vec![
+            Point { x: 1, y: 0 },
+            Point { x: 0, y: 1 },
+            Point { x: 1, y: 1 },
+        ];
+        let board = GameBoard::new(3, 3, &init_state);
+        assert_eq!(board.count_live_neighbors(0, 0), 3);
+    }
+
+    #[test]
+    fn count_live_neighbors_does_not_count_self() {
+        let init_state = vec![Point { x: 1, y: 1 }];
+        let board = GameBoard::new(3, 3, &init_state);
+        assert_eq!(board.count_live_neighbors(1, 1), 0);
+    }
+
+    #[test]
+    fn next_state_cell_dies_from_underpopulation() {
+        // Single cell dies from loneliness.
+        let init_state = vec![Point { x: 1, y: 1 }];
+        let mut board = GameBoard::new(3, 3, &init_state);
+        board.next_state();
+
+        assert!(!board.points[4]); // Center cell should die
+    }
+
+    #[test]
+    fn next_state_cell_survives() {
+        // Three cells in a row, middle cell should survive.
+        let init_state = vec![
+            Point { x: 0, y: 1 },
+            Point { x: 1, y: 1 },
+            Point { x: 2, y: 1 },
+        ];
+        let mut board = GameBoard::new(3, 3, &init_state);
+        board.next_state();
+
+        assert!(board.points[4]); // Center cell should survive
+    }
+
+    #[test]
+    fn next_state_cell_dies_from_overpopulation() {
+        // Center cell surrounded by 4 neighbors should die.
+        let init_state = vec![
+            Point { x: 0, y: 0 },
+            Point { x: 2, y: 0 },
+            Point { x: 1, y: 1 },
+            Point { x: 0, y: 2 },
+            Point { x: 2, y: 2 },
+        ];
+        let mut board = GameBoard::new(3, 3, &init_state);
+        board.next_state();
+
+        assert!(!board.points[4]); // Center cell should die
+    }
+
+    #[test]
+    fn next_state_cell_is_born_through_reproduction() {
+        // Empty cell with exactly 3 neighbors should become alive.
+        let init_state = vec![
+            Point { x: 0, y: 0 },
+            Point { x: 1, y: 0 },
+            Point { x: 0, y: 1 },
+        ];
+        let mut board = GameBoard::new(3, 3, &init_state);
+        board.next_state();
+
+        assert!(board.points[4]); // Center cell should become alive
+    }
+
+    #[test]
+    fn load_initial_state_can_load_empty_file() {
+        let dir = testdir!();
+        let file_path = dir.join("empty.txt");
+        fs::write(&file_path, "").unwrap();
+
+        let points = load_initial_state(&file_path).unwrap();
+        assert!(points.is_empty());
+    }
+
+    #[test]
+    fn load_initial_state_can_load_file_with_one_point() {
+        let dir = testdir!();
+        let file_path = dir.join("single.txt");
+        fs::write(&file_path, "(1,2)\n").unwrap();
+
+        let points = load_initial_state(&file_path).unwrap();
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0], Point::new(1, 2));
+    }
+
+    #[test]
+    fn load_initial_state_can_load_file_with_multiple_points() {
+        let dir = testdir!();
+        let file_path = dir.join("multiple.txt");
+        fs::write(&file_path, "(1,2)\n(3,4)\n(5,6)\n").unwrap();
+
+        let points = load_initial_state(&file_path).unwrap();
+        assert_eq!(points.len(), 3);
+        assert_eq!(points[0], Point::new(1, 2));
+        assert_eq!(points[1], Point::new(3, 4));
+        assert_eq!(points[2], Point::new(5, 6));
+    }
+
+    #[test]
+    fn load_initial_state_ignores_lines_with_invalid_format() {
+        let dir = testdir!();
+        let file_path = dir.join("invalid_format.txt");
+        fs::write(&file_path, "(1,2)\ninvalid\n(3,4)\n").unwrap();
+
+        let points = load_initial_state(&file_path).unwrap();
+        assert_eq!(points.len(), 2);
+        assert_eq!(points[0], Point::new(1, 2));
+        assert_eq!(points[1], Point::new(3, 4));
+    }
+
+    #[test]
+    fn load_initial_state_ignores_invalid_numbers() {
+        let dir = testdir!();
+        let file_path = dir.join("invalid_numbers.txt");
+        fs::write(&file_path, "(1,2)\n(a,b)\n(3,4)\n").unwrap();
+
+        let points = load_initial_state(&file_path).unwrap();
+        assert_eq!(points.len(), 2);
+        assert_eq!(points[0], Point::new(1, 2));
+        assert_eq!(points[1], Point::new(3, 4));
+    }
+
+    #[test]
+    fn load_initial_state_can_handle_extra_whitespace() {
+        let dir = testdir!();
+        let file_path = dir.join("whitespace.txt");
+        fs::write(&file_path, "  (1, 2)  \n\t(3,4)\t\n").unwrap();
+
+        let points = load_initial_state(&file_path).unwrap();
+        assert_eq!(points.len(), 2);
+        assert_eq!(points[0], Point::new(1, 2));
+        assert_eq!(points[1], Point::new(3, 4));
+    }
+
+    #[test]
+    fn load_initial_state_returns_err_on_nonexistent_file() {
+        let dir = testdir!();
+        let file_path = dir.join("nonexistent.txt");
+
+        assert!(load_initial_state(&file_path).is_err());
+    }
 }
