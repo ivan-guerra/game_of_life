@@ -96,7 +96,7 @@ impl GameBoard {
                 let ch = if self.points[idx] { '█' } else { ' ' };
 
                 stdout.execute(SetForegroundColor(Color::White))?;
-                stdout.execute(MoveTo(x, y))?;
+                stdout.execute(MoveTo(y, x))?;
                 stdout.execute(Print(ch))?;
             }
         }
