@@ -1,5 +1,15 @@
+use crossterm::{
+    cursor::{Hide, MoveTo, Show},
+    event::{self, Event, KeyCode},
+    style::{Color, Print, SetForegroundColor},
+    terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
+};
+use std::error::Error;
 use std::io::BufRead;
+use std::io::{stdout, Write};
 use std::path;
+use std::time;
 
 pub struct Config {
     pub init_state_file: path::PathBuf,
@@ -76,6 +86,21 @@ impl GameBoard {
             })
             .collect();
     }
+
+    fn draw(&self) -> Result<(), Box<dyn Error>> {
+        let mut stdout = stdout();
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let idx = usize::from(x + y * self.width);
+                let ch = if self.points[idx] { '█' } else { ' ' };
+
+                stdout.execute(SetForegroundColor(Color::White))?;
+                stdout.execute(MoveTo(x, y))?;
+                stdout.execute(Print(ch))?;
+            }
+        }
+        Ok(())
+    }
 }
 
 fn load_initial_state(init_state_file: &path::PathBuf) -> Result<Vec<Point>, std::io::Error> {
@@ -104,11 +129,48 @@ fn load_initial_state(init_state_file: &path::PathBuf) -> Result<Vec<Point>, std
     Ok(points)
 }
 
-pub fn run(config: &Config) -> Result<(), std::io::Error> {
-    let game_board = GameBoard::new(40, 20, &load_initial_state(&config.init_state_file)?);
-    // loop {
-    //     std::thread::sleep(std::time::Duration::from_micros(config.refresh_rate_usec));
-    //     game_board.next_state();
-    // }
+pub fn run_draw_loop(config: &Config) -> Result<(), Box<dyn Error>> {
+    let mut stdout = stdout();
+    let screen_dim = crossterm::terminal::size()?;
+    let mut game_board = GameBoard::new(
+        screen_dim.0,
+        screen_dim.1 - 1, // Leave some space for the quit message.
+        &load_initial_state(&config.init_state_file)?,
+    );
+
+    // Enter raw mode, alternate screen, clear it, and hide the cursor.
+    terminal::enable_raw_mode()?;
+    stdout.execute(EnterAlternateScreen)?;
+    stdout.execute(Clear(ClearType::All))?;
+    stdout.execute(Hide)?;
+
+    // Add the text "Press 'q' to quit" to the bottom of the screen.
+    stdout.execute(MoveTo(0, screen_dim.1 - 1))?;
+    stdout.execute(SetForegroundColor(Color::White))?;
+    stdout.execute(Print("press 'q' to quit"))?;
+
+    // Main game loop
+    loop {
+        // Update and draw game state
+        game_board.next_state();
+        game_board.draw()?;
+        stdout.flush()?;
+
+        // Check for quit command
+        if event::poll(time::Duration::from_millis(config.refresh_rate_usec))? {
+            if let Event::Key(key_event) = event::read()? {
+                if key_event.code == KeyCode::Char('q') || key_event.code == KeyCode::Esc {
+                    break;
+                }
+            }
+        }
+    }
+
+    // Reset terminal state before exit.
+    stdout.execute(Clear(ClearType::All))?;
+    stdout.execute(Show)?;
+    stdout.execute(LeaveAlternateScreen)?;
+    terminal::disable_raw_mode()?;
+
     Ok(())
 }

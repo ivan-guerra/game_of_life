@@ -22,8 +22,8 @@ fn main() {
         args.refresh_rate_usec,
     );
 
-    // if let Err(e) = sierpinski::run_draw_loop(&config) {
-    //     eprintln!("error: {}", e);
-    //     std::process::exit(1);
-    // } 
+    if let Err(e) = game_of_life::run_draw_loop(&config) {
+        eprintln!("error: {}", e);
+        std::process::exit(1);
+    } 
 }
