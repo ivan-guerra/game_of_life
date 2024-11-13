@@ -1,3 +1,34 @@
+//! Conway's Game of Life
+//!
+//! This module provides a terminal-based visualization of Conway's Game of Life,
+//! a cellular automaton that follows simple rules to create complex patterns.
+//!
+//! # Features
+//!
+//! - Terminal-based visualization using crossterm.
+//! - Configurable refresh rate.
+//! - Load initial patterns from text files.
+//! - Automatic centering and scaling of patterns to fit the terminal.
+//! - Raw terminal mode for smooth rendering.
+//!
+//! # Rules
+//!
+//! The game follows Conway's classic rules:
+//! 1. Any live cell with 2 or 3 live neighbors survives.
+//! 2. Any dead cell with exactly 3 live neighbors becomes alive.
+//! 3. All other cells die or remain dead.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use game_of_life::{Config, run_draw_loop};
+//!
+//! let config = Config::new(
+//!     std::path::PathBuf::from("patterns/glider.txt"),
+//!     100_000, // 100ms refresh rate
+//! );
+//! run_draw_loop(&config).expect("Failed to run game");
+//! ```
 use crossterm::{
     cursor::{Hide, MoveTo, Show},
     event::{self, Event},
@@ -11,12 +42,28 @@ use std::io::{stdout, Write};
 use std::path;
 use std::time;
 
+/// Configuration for the Game of Life simulation.
+///
+/// Contains settings for initialization and execution of the simulation,
+/// including the path to the initial state file and refresh rate.
 pub struct Config {
+    /// Path to the file containing the initial state of the game grid.
     pub init_state_file: path::PathBuf,
+    /// Refresh rate of the game simulation in microseconds.
     pub refresh_rate_usec: u64,
 }
 
 impl Config {
+    /// Creates a new Config instance with the specified parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `init_state_file` - Path to the file containing the initial state configuration.
+    /// * `refresh_rate_usec` - The refresh rate of the game simulation in microseconds.
+    ///
+    /// # Returns
+    ///
+    /// A new Config instance initialized with the provided parameters.
     pub fn new(init_state_file: path::PathBuf, refresh_rate_usec: u64) -> Config {
         Config {
             init_state_file,
@@ -25,26 +72,43 @@ impl Config {
     }
 }
 
+/// Represents a point in 2D space with unsigned integer coordinates.
+///
+/// Used to specify cell positions in the Game of Life grid, where:
+/// - x represents the horizontal position.
+/// - y represents the vertical position.
 #[derive(Debug, PartialEq)]
-struct Point {
-    x: u16,
-    y: u16,
+pub struct Point {
+    /// The horizontal coordinate (column).
+    pub x: u16,
+    /// The vertical coordinate (row).
+    pub y: u16,
 }
 
 impl Point {
-    fn new(x: u16, y: u16) -> Point {
+    /// Creates a new Point with the given x and y coordinates.
+    pub fn new(x: u16, y: u16) -> Point {
         Point { x, y }
     }
 }
 
-struct GameBoard {
-    width: u16,
-    height: u16,
-    points: Vec<bool>,
+/// Represents the game board for Conway's Game of Life.
+///
+/// Contains the dimensions of the board and the current state of all cells,
+/// where each cell is represented as a boolean value (true for alive, false for dead).
+pub struct GameBoard {
+    /// Width of the game board in cells.
+    pub width: u16,
+    /// Height of the game board in cells.
+    pub height: u16,
+    /// Vector storing the state of each cell, where true represents a live cell
+    /// and false represents a dead cell. The cells are stored in row-major order.
+    pub points: Vec<bool>,
 }
 
 impl GameBoard {
-    fn new(width: u16, height: u16, init_state: &Vec<Point>) -> GameBoard {
+    /// Creates a new GameBoard with the specified dimensions and initial state.
+    pub fn new(width: u16, height: u16, init_state: &Vec<Point>) -> GameBoard {
         let mut points = vec![false; usize::from(width * height)];
         for point in init_state {
             points[usize::from(point.x + point.y * width)] = true;
@@ -56,7 +120,11 @@ impl GameBoard {
         }
     }
 
-    fn count_live_neighbors(&self, x: u16, y: u16) -> u16 {
+    /// Counts the number of live neighbors for a cell at the specified coordinates.
+    /// # Returns
+    ///
+    /// The number of live neighboring cells (0-8) for the cell at position (x, y).
+    pub fn count_live_neighbors(&self, x: u16, y: u16) -> u16 {
         let mut count = 0;
         for i in -1..=1 {
             for j in -1..=1 {
@@ -74,7 +142,13 @@ impl GameBoard {
         count
     }
 
-    fn next_state(&mut self) {
+    /// Calculates and updates the next state of the game board according to Conway's Game of Life rules.
+    ///
+    /// The rules are:
+    /// 1. Any live cell with 2 or 3 live neighbors survives.
+    /// 2. Any dead cell with exactly 3 live neighbors becomes alive.
+    /// 3. All other cells die or remain dead.
+    pub fn next_state(&mut self) {
         self.points = (0..self.height)
             .flat_map(|y| (0..self.width).map(move |x| (x, y)))
             .enumerate()
@@ -88,7 +162,17 @@ impl GameBoard {
             .collect();
     }
 
-    fn draw(&self) -> Result<(), Box<dyn Error>> {
+    /// Draws the current state of the game board to the terminal.
+    ///
+    /// Uses crossterm to:
+    /// - Move the cursor to each cell position.
+    /// - Set the text color to white.
+    /// - Print either a full block character ('█') for live cells or a space for dead cells.
+    ///
+    /// # Returns
+    ///
+    /// `Result<(), Box<dyn Error>>` - Ok if drawing succeeds, Err if there's a terminal error.
+    pub fn draw(&self) -> Result<(), Box<dyn Error>> {
         let mut stdout = stdout();
         for y in 0..self.height {
             for x in 0..self.width {
@@ -104,7 +188,21 @@ impl GameBoard {
     }
 }
 
-fn load_initial_state(init_state_file: &path::PathBuf) -> Result<Vec<Point>, std::io::Error> {
+/// Loads the initial state of the game board from a file.
+///
+/// # Arguments
+///
+/// * `init_state_file` - Path to the file containing initial cell coordinates.
+///
+/// # Returns
+///
+/// * `Result<Vec<Point>, std::io::Error>` - A vector of Points representing live cells if successful,
+///   or an IO error if file operations fail.
+///
+/// # Format
+///
+/// The file should contain coordinates in the format "(x,y)" with one coordinate pair per line.
+pub fn load_initial_state(init_state_file: &path::PathBuf) -> Result<Vec<Point>, std::io::Error> {
     let mut points = Vec::new();
     let file = std::fs::File::open(init_state_file)?;
     let reader = std::io::BufReader::new(file);
@@ -130,7 +228,31 @@ fn load_initial_state(init_state_file: &path::PathBuf) -> Result<Vec<Point>, std
     Ok(points)
 }
 
-fn center_points_on_screen(points: &[Point], screen_width: u16, screen_height: u16) -> Vec<Point> {
+/// Centers and scales a collection of points to fit within the screen dimensions.
+///
+/// # Arguments
+///
+/// * `points` - A slice of Points to be centered and scaled.
+/// * `screen_width` - The width of the screen in characters.
+/// * `screen_height` - The height of the screen in characters.
+///
+/// # Returns
+///
+/// A new vector of Points that have been centered and scaled to fit the screen while
+/// maintaining aspect ratio. Returns an empty vector if the input is empty.
+///
+/// # Details
+///
+/// The function:
+/// 1. Finds the bounding box of all input points.
+/// 2. Calculates appropriate scaling to fit the screen while maintaining aspect ratio.
+/// 3. Centers the scaled points on screen.
+/// 4. Ensures all points remain within screen bounds.
+pub fn center_points_on_screen(
+    points: &[Point],
+    screen_width: u16,
+    screen_height: u16,
+) -> Vec<Point> {
     if points.is_empty() {
         return Vec::new();
     }
@@ -201,6 +323,30 @@ fn center_points_on_screen(points: &[Point], screen_width: u16, screen_height: u
         .collect()
 }
 
+/// Runs the main game loop for Conway's Game of Life with terminal visualization.
+///
+/// # Arguments
+///
+/// * `config` - Configuration settings for the game, including initial state file and refresh
+///              rate.
+///
+/// # Returns
+///
+/// `Result<(), Box<dyn Error>>` - Ok if the game runs and exits successfully, Err if there's an error.
+///
+/// # Details
+///
+/// This function:
+/// 1. Initializes the terminal in raw mode with an alternate screen.
+/// 2. Loads and centers the initial game state.
+/// 3. Runs the main game loop until a key is pressed.
+/// 4. Handles terminal cleanup before exit.
+///
+/// The game loop:
+/// - Updates the game state according to Conway's rules.
+/// - Draws the current state to the terminal.
+/// - Checks for key presses to exit.
+/// - Maintains the specified refresh rate.
 pub fn run_draw_loop(config: &Config) -> Result<(), Box<dyn Error>> {
     let mut stdout = stdout();
     let screen_dim = crossterm::terminal::size()?;
