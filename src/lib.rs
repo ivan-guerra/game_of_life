@@ -96,7 +96,7 @@ impl GameBoard {
                 let ch = if self.points[idx] { '█' } else { ' ' };
 
                 stdout.execute(SetForegroundColor(Color::White))?;
-                stdout.execute(MoveTo(y, x))?;
+                stdout.execute(MoveTo(x, y))?;
                 stdout.execute(Print(ch))?;
             }
         }
@@ -130,14 +130,86 @@ fn load_initial_state(init_state_file: &path::PathBuf) -> Result<Vec<Point>, std
     Ok(points)
 }
 
+fn center_points_on_screen(points: &[Point], screen_width: u16, screen_height: u16) -> Vec<Point> {
+    if points.is_empty() {
+        return Vec::new();
+    }
+
+    // Convert screen dimensions to f32 once at the start
+    let screen_width_f = f32::from(screen_width);
+    let screen_height_f = f32::from(screen_height);
+
+    // Find the bounding box of the input points
+    let min_x = points
+        .iter()
+        .map(|p| f32::from(p.x))
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    let max_x = points
+        .iter()
+        .map(|p| f32::from(p.x))
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    let min_y = points
+        .iter()
+        .map(|p| f32::from(p.y))
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    let max_y = points
+        .iter()
+        .map(|p| f32::from(p.y))
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+
+    // Calculate pattern dimensions
+    let pattern_width = max_x - min_x;
+    let pattern_height = max_y - min_y;
+
+    // Calculate scaling factors if pattern is larger than screen
+    let scale_x = if pattern_width >= screen_width_f {
+        (screen_width_f - 2.0) / pattern_width
+    } else {
+        1.0
+    };
+    let scale_y = if pattern_height >= screen_height_f {
+        (screen_height_f - 2.0) / pattern_height
+    } else {
+        1.0
+    };
+    // Use the smaller scale to maintain aspect ratio
+    let scale = scale_x.min(scale_y);
+
+    // Calculate scaled dimensions
+    let scaled_width = pattern_width * scale;
+    let scaled_height = pattern_height * scale;
+
+    // Calculate offsets to center the scaled pattern
+    let x_offset = (screen_width_f - scaled_width) / 2.0 - (min_x * scale);
+    let y_offset = (screen_height_f - scaled_height) / 2.0 - (min_y * scale);
+
+    // Translate and scale all points, keeping them within screen bounds
+    points
+        .iter()
+        .map(|p| {
+            let scaled_x = f32::from(p.x) * scale + x_offset;
+            let scaled_y = f32::from(p.y) * scale + y_offset;
+            Point::new(
+                (scaled_x.floor() as u16).min(screen_width.saturating_sub(1)),
+                (scaled_y.floor() as u16).min(screen_height.saturating_sub(1)),
+            )
+        })
+        .collect()
+}
+
 pub fn run_draw_loop(config: &Config) -> Result<(), Box<dyn Error>> {
     let mut stdout = stdout();
     let screen_dim = crossterm::terminal::size()?;
-    let mut game_board = GameBoard::new(
+    let init_state = center_points_on_screen(
+        &load_initial_state(&config.init_state_file)?,
         screen_dim.0,
         screen_dim.1,
-        &load_initial_state(&config.init_state_file)?,
     );
+    let mut game_board = GameBoard::new(screen_dim.0, screen_dim.1, &init_state);
 
     // Enter raw mode, alternate screen, clear it, and hide the cursor.
     terminal::enable_raw_mode()?;
@@ -376,5 +448,98 @@ mod tests {
         let file_path = dir.join("nonexistent.txt");
 
         assert!(load_initial_state(&file_path).is_err());
+    }
+
+    #[test]
+    fn center_points_on_screen_returns_empty_vec_when_given_no_points() {
+        let points = Vec::new();
+        let centered = center_points_on_screen(&points, 10, 10);
+
+        assert!(centered.is_empty());
+    }
+
+    #[test]
+    fn center_points_on_screen_centers_single_point() {
+        let points = vec![Point::new(0, 0)];
+        let centered = center_points_on_screen(&points, 3, 3);
+
+        assert_eq!(centered, vec![Point::new(1, 1)]);
+    }
+
+    #[test]
+    fn center_points_on_screen_centers_pattern_smaller_than_screen() {
+        let points = vec![
+            Point::new(0, 0),
+            Point::new(1, 0),
+            Point::new(0, 1),
+            Point::new(1, 1),
+        ];
+        let centered = center_points_on_screen(&points, 10, 10);
+
+        let expected = vec![
+            Point::new(4, 4),
+            Point::new(5, 4),
+            Point::new(4, 5),
+            Point::new(5, 5),
+        ];
+        assert_eq!(centered, expected);
+    }
+
+    #[test]
+    fn center_points_on_screen_centers_pattern_larger_than_screen() {
+        let points = vec![
+            Point::new(0, 0),
+            Point::new(10, 0),
+            Point::new(0, 10),
+            Point::new(10, 10),
+        ];
+        let centered = center_points_on_screen(&points, 5, 5);
+
+        // Pattern should be scaled down to fit
+        assert!(centered.iter().all(|p| p.x < 5 && p.y < 5));
+        // Should maintain relative positions
+        assert!(centered[1].x > centered[0].x);
+        assert!(centered[2].y > centered[0].y);
+    }
+
+    #[test]
+    fn center_points_on_screen_maintains_aspect_ratio() {
+        let points = vec![
+            Point::new(0, 0),
+            Point::new(4, 0),
+            Point::new(0, 2),
+            Point::new(4, 2),
+        ];
+        let centered = center_points_on_screen(&points, 10, 10);
+
+        // Check that width:height ratio is maintained
+        let width = centered[1].x - centered[0].x;
+        let height = centered[2].y - centered[0].y;
+        assert_eq!(width / 2, height);
+    }
+
+    #[test]
+    fn center_points_on_screen_respects_screen_boundaries() {
+        let points = vec![Point::new(0, 0), Point::new(100, 100)];
+        let screen_width = 5;
+        let screen_height = 5;
+        let centered = center_points_on_screen(&points, screen_width, screen_height);
+
+        for point in centered {
+            assert!(point.x < screen_width);
+            assert!(point.y < screen_height);
+        }
+    }
+
+    #[test]
+    fn center_points_on_screen_preserves_scaling() {
+        let points = vec![Point::new(0, 0), Point::new(2, 0), Point::new(0, 1)];
+        let centered = center_points_on_screen(&points, 20, 20);
+
+        // Original 2:1 ratio should be maintained
+        let horizontal_dist = centered[1].x - centered[0].x;
+        let vertical_dist = centered[2].y - centered[0].y;
+
+        assert_eq!(horizontal_dist, vertical_dist * 2);
     }
 }
