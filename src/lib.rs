@@ -109,7 +109,7 @@ pub struct GameBoard {
 impl GameBoard {
     /// Creates a new GameBoard with the specified dimensions and initial state.
     pub fn new(width: u16, height: u16, init_state: &Vec<Point>) -> GameBoard {
-        let mut points = vec![false; usize::from(width * height)];
+        let mut points = vec![false; usize::from(width) * usize::from(height)];
         for point in init_state {
             points[usize::from(point.x + point.y * width)] = true;
         }
