@@ -1,6 +1,6 @@
 # Conway's Game of Life
 
-https://github.com/user-attachments/assets/8f561ef1-b5fe-49fc-8536-d5908e932e5f
+https://github.com/user-attachments/assets/ebdde841-1115-4c8e-b756-4dff3fcfcd4e
 
 `life` is a command line application that renders a [Conway's Game of Life][1]
 simulation in your terminal window. The user can define their own custom initial
